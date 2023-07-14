@@ -19,7 +19,7 @@ type Unseal struct {
 }
 
 // NewUnboxer wraps the passed Reader into an Unboxer.
-func NewUnseal(reader io.Reader, nonce *[24]byte, secret *[32]byte) *Unseal {
+func NewUnseal(nonce *[24]byte, secret *[32]byte, reader io.Reader) *Unseal {
 	return &Unseal{
 		nonce:  nonce,
 		secret: secret,

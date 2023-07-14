@@ -1,6 +1,7 @@
 package dpc_secretmessage
 
 import (
+	"golang.org/x/crypto/nacl/secretbox"
 	"io"
 	"reflect"
 	"testing"
@@ -8,9 +9,9 @@ import (
 
 func TestNewUnseal(t *testing.T) {
 	type args struct {
-		reader io.Reader
 		nonce  *[24]byte
 		secret *[32]byte
+		reader io.Reader
 	}
 	tests := []struct {
 		name string
@@ -21,7 +22,7 @@ func TestNewUnseal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewUnseal(tt.args.reader, tt.args.nonce, tt.args.secret); !reflect.DeepEqual(got, tt.want) {
+			if got := NewUnseal(tt.args.nonce, tt.args.secret, tt.args.reader); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewUnseal() = %v, want %v", got, tt.want)
 			}
 		})
@@ -29,9 +30,15 @@ func TestNewUnseal(t *testing.T) {
 }
 
 func TestUnseal_ReadMessage(t *testing.T) {
+	type fields struct {
+		nonce  *[StreamNonceLength]byte
+		secret *[SecretKeyLength]byte
+		reader io.Reader
+		buf    [MaxMessageSegmentSize + secretbox.Overhead]byte
+	}
 	tests := []struct {
 		name    string
-		u       *Unseal
+		fields  fields
 		want    []byte
 		wantErr bool
 	}{
@@ -39,13 +46,19 @@ func TestUnseal_ReadMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.u.ReadMessage()
+			u := &Unseal{
+				nonce:  tt.fields.nonce,
+				secret: tt.fields.secret,
+				reader: tt.fields.reader,
+				buf:    tt.fields.buf,
+			}
+			got, err := u.ReadMessage()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Unseal.ReadMessage() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ReadMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Unseal.ReadMessage() = %v, want %v", got, tt.want)
+				t.Errorf("ReadMessage() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
